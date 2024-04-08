@@ -1,0 +1,89 @@
+import React, { useState, useEffect, useRouter } from "react";
+import "./styles.css";
+import uploadLogo from "./upload.png";
+import Login from "./Login";
+import Signup from "./Signup";
+import "./styles.css";
+import { auth, db } from "../../firebaseConfig";
+import createUserWithEmailAndPassword from "firebase/auth";
+import { useNavigate } from "react-router-dom";
+
+import { doc, setDoc } from "firebase/firestore";
+const App = () => {
+  const [photos, setPhotos] = useState([]);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  const handleUpload = (event) => {
+    const files = event.target.files;
+    const newPhotos = [...photos];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        newPhotos.push(event.target.result);
+        setPhotos(newPhotos);
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleLogin = () => {
+    setLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setLoggedIn(false);
+  };
+
+  const checkIfUserIsLoggedIn = () => {
+    // Check if the user is logged in
+    fetch("/api/user/is-logged-in")
+      .then(response => response.json())
+      .then(data => setLoggedIn(data.isLoggedIn));
+  };
+
+  useEffect(() => {
+    checkIfUserIsLoggedIn();
+  }, []);
+
+  useEffect(() => {
+    // Fetch the photos from the server
+    db.collection("photos").onSnapshot((snapshot) => {
+      setPhotos(snapshot.docs.map((doc) => doc.data()));
+    });
+  }, []);
+
+  return (
+    <div className="container" style={{ backgroundColor: "lightblue" }}>
+      <div className="logo-container" style={{ backgroundColor: "lightgreen" }}>
+        <img src={uploadLogo} alt="Upload Logo" className="logo" />
+        <h2 className="heading">Upload your photos here</h2>
+      </div>
+
+      {!loggedIn ? (
+        <Login onLogin={handleLogin} />
+      ) : (
+        <>
+          <div className="upload-container">
+            <input type="file" multiple onChange={handleUpload} />
+          </div>
+          <div className="photos-container">
+            {photos.map((photo, index) => (
+              <img key={index} src={photo} alt="uploaded" className="photo" />
+            ))}
+          </div>
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
+        </>
+      )}
+
+      <Signup />
+    </div>
+  );
+};
+
+export default App;
